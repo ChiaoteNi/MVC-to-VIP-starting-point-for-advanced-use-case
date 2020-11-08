@@ -19,6 +19,7 @@ import UIKit
 
 protocol MeetupEventListPresentationLogic {
     func presentMeetupEvents(response: MeetupEventList.FetchEvents.Response)
+    func presentUpdateHistoryEvent(response: MeetupEventList.UpdateHistoryEvent.Response)
 }
 
 final class MeetupEventListPresenter: MeetupEventListPresentationLogic {
@@ -26,10 +27,35 @@ final class MeetupEventListPresenter: MeetupEventListPresentationLogic {
     weak var viewController: MeetupEventListDisplayLogic?
     
     func presentMeetupEvents(response: MeetupEventList.FetchEvents.Response) {
-        // TODO: 將拉到的資料，轉換為View可以直接顯示的UIModel，要無腦塞 (ex: Date()->String, enum->Color)
+        
+        let historyEvents = response.historyEvents.compactMap {
+            self.makeHistoryDisplayEvent(
+                with: $0.meetupEvent,
+                favoriteState: $0.favoriteState
+            )
+        }
+        
+        let recentlyEvents = response.recentlyEvents.compactMap {
+            self.makeRecentlyDisplayEvent(
+                with: $0.meetupEvent
+            )
+        }
+        
+        let viewModel: MeetupEventList.FetchEvents.ViewModel = .init(
+            historyEvents: historyEvents,
+            recentlyEvents: recentlyEvents
+        )
         
         DispatchQueue.main.async {
-            self.viewController?.displayMeetupEvents(viewModel: <#T##MeetupEventList.FetchEvents.ViewModel#>)
+            self.viewController?.displayMeetupEvents(viewModel: viewModel)
+        }
+    }
+    
+    func presentUpdateHistoryEvent(response: MeetupEventList.UpdateHistoryEvent.Response) {
+        // TODO: 將response轉換成MeetupEventList.UpdateHistoryEvent.ViewModel，再轉交給VC
+        
+        DispatchQueue.main.async {
+            self.viewController?.displayUpdateHistoryEvent(viewModel: <#T##MeetupEventList.UpdateHistoryEvent.ViewModel#>)
         }
     }
 }
@@ -37,7 +63,6 @@ final class MeetupEventListPresenter: MeetupEventListPresentationLogic {
 // MARK: - Private functions
 extension MeetupEventListPresenter {
     
-    // 轉換 MeetupEvent 成 近期活動 顯示要用的Model
     private func makeRecentlyDisplayEvent(with meetupEvent: MeetupEvent) -> MeetupEventList.DisplayRecentlyEvent {
         
         var coverImageURL: URL?
@@ -54,7 +79,6 @@ extension MeetupEventListPresenter {
         )
     }
     
-    // 轉換 MeetupEvent 成 活動紀錄 顯示要用的Model
     private func makeHistoryDisplayEvent(with meetupEvent: MeetupEvent, favoriteState: MeetupEventFavoriteState) -> MeetupEventList.DisplayHistoryEvent {
         
         var coverImageURL: URL?
@@ -80,7 +104,6 @@ extension MeetupEventListPresenter {
         )
     }
     
-    // 轉換時間Date()成實際顯示的日期文字(ex: 11月08日 今日)
     private func makeDateText(with eventDate: Date?) -> String {
         guard let eventDate = eventDate else { return "" }
         

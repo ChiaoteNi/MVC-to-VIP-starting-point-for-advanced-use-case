@@ -19,21 +19,96 @@ import Foundation
 
 protocol MeetupEventListBusinessLogic {
     func fetchMeetupEvents(request: MeetupEventList.FetchEvents.Request)
+    func tapFavorite(request: MeetupEventList.TapFavorite.Request)
+    func subscribeFavoriteUpdate(request: MeetupEventList.SubscribeFavoriteUpdate.Request)
+    func unsubscribeFavoriteUpdate(request: MeetupEventList.UnsubscribeFavoriteUpdate.Request)
 }
 
 final class MeetupEventListInteractor: MeetupEventListBusinessLogic {
     
     var presenter: MeetupEventListPresentationLogic?
     
-    private let fetchMeetupEventWorker: MeetupEventListAPIWorker // 拉活動列表的worker
+    private var fetchMeetupEventWorker: MeetupEventListAPIWorker
+    private let favoriteWorker: MeetupEventFavoriteWorker = .shared
+    
+    private var historyEvents: [MeetupEventList.EventResponseItem] = []
     
     init(jsonAPIWorker: JsonAPIWorker = .init()) {
         fetchMeetupEventWorker = .init(jsonAPIWorker: jsonAPIWorker)
     }
     
     func fetchMeetupEvents(request: MeetupEventList.FetchEvents.Request) {
-        //TODO: 拉活動資料，並依照日期分成 最近活動/活動紀錄 兩種資料list (請worker拉資料)
-        presenter?.presentMeetupEvents(response: <#T##MeetupEventList.FetchEvents.Response#>)
+        fetchMeetupEventWorker.fetchMeetupEvents { [weak self] result in
+            guard let self = self else { return }
+            
+            switch result {
+            case .success(let events):
+                var recentlyEvents: [MeetupEventList.EventResponseItem] = []
+                var historyEvents: [MeetupEventList.EventResponseItem] = []
+                
+                events.forEach { event in
+                    let favoriteState = self.favoriteWorker.getFavoriteState(withID: event.id)
+                    if let date = event.date, Date().timeIntervalSince(date) < Constant.oneDay {
+                        recentlyEvents.append((event, favoriteState))
+                    } else {
+                        historyEvents.append((event, favoriteState))
+                    }
+                }
+                self.historyEvents = historyEvents
+                
+                let response: MeetupEventList.FetchEvents.Response = .init(
+                    recentlyEvents: recentlyEvents,
+                    historyEvents: historyEvents
+                )
+                self.presenter?.presentMeetupEvents(response: response)
+            case .failure(let error):
+                print(error)
+            }
+        }
+    }
+    
+    func tapFavorite(request: MeetupEventList.TapFavorite.Request) {
+        // TODO: 先用eventID取出這次要更新的meetupEvent
+        // 將該event變更為相反的狀態，請favoriteWorker更新狀態，重新寫入historyEvents
+        // 最後將Event交給presenter，請presenter更新 活動紀錄 類型的活動
+        // 這邊可注意到，我們其實從一個use case的request，轉接到另一個use case
+        
+        //        historyEvents[safe: index] = newResponseItem
+        presenter?.presentUpdateHistoryEvent(response: <#T##MeetupEventList.UpdateHistoryEvent.Response#>)
+    }
+    
+    func subscribeFavoriteUpdate(request: MeetupEventList.SubscribeFavoriteUpdate.Request) {
+        favoriteWorker.addObserver(self)
+        // TODO: favoriteWorker addObserver，並在 MeetupEventFavorite Observer 那邊處理更新的資料
+    }
+    
+    func unsubscribeFavoriteUpdate(request: MeetupEventList.UnsubscribeFavoriteUpdate.Request) {
+        favoriteWorker.removeObserver(self)
+    }
+}
+
+// MARK: - MeetupEventFavorite Observer
+extension MeetupEventListInteractor: MeetupEventFavoriteObserver {
+    
+    func favoriteStateDidChanged(eventID: String, to newState: MeetupEventFavoriteState) {
+        // TODO: 收到更新狀態的EventID與新的Favotire狀態，用類似tapFavorite的實作方式(但不用顛倒狀態)更新資料
+        // 然後再請presenter更新 活動紀錄 類型的活動
+        
+        presenter?.presentUpdateHistoryEvent(response: <#T##MeetupEventList.UpdateHistoryEvent.Response#>)
+    }
+}
+
+// MARK: - Test Only methods
+extension MeetupEventListInteractor {
+    
+    // This function is a control point to reset dataSource in test environment.
+    func cp_resetHistoryEvents(eventResponseItems: [MeetupEventList.EventResponseItem]) {
+        self.historyEvents = eventResponseItems
+    }
+    
+    // This function is a control point to reset persistenceWorker in test environment.
+    func cp_resetFetchMeetupEventWorker(worker: MeetupEventListAPIWorker) {
+        self.fetchMeetupEventWorker = worker
     }
 }
 

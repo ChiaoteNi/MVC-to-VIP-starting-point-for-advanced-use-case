@@ -92,7 +92,17 @@ final class RecentlyMeetupEventCell: BaseCell {
     // MARK: Configurate Cell.
     
     func configureCell(with meetupEvent: MeetupEventList.DisplayRecentlyEvent) {
-        // TODO: 這邊用轉換好的UIModel來建立Cell畫面顯示
+        titleLabel.text = meetupEvent.title
+        hostNameLabel.text = meetupEvent.hostName
+        dateLabel.text = meetupEvent.dateText
+
+        coverImageView.image = nil
+        if let url = meetupEvent.coverImageURL {
+            coverImageView.isHidden = false
+            coverImageView.kf.setImage(with: url)
+        } else {
+            coverImageView.isHidden = true
+        }
     }
 }
 

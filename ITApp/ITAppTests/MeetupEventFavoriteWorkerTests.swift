@@ -11,7 +11,7 @@ import XCTest
 class MeetupEventFavoriteWorkerTests: XCTestCase {
     private let sut: MeetupEventFavoriteWorker = .shared
 
-    func test_toggleMeetupEventFavoriteState() {
+    func testToggleMeetupEventFavoriteState() {
         let persistenceWorker = UserDefaultsMock()
         sut.cp_resetPersistenceWorker(persistenceWorker: persistenceWorker)
 
@@ -20,14 +20,14 @@ class MeetupEventFavoriteWorkerTests: XCTestCase {
 
         // empty
         persistenceWorker.verifyTestActionsOrder(to: [])
-        XCTAssertEqual(sut.getFavoriteState(withID: meetupEventID), .unfavorite, "default meetup event should be unfavorite")
+        XCTAssertEqual(sut.getFavoriteState(withID: meetupEventID), .unfavorite, "default meetup event should be unfavorite.")
         persistenceWorker.verifyTestActionsOrder(to: [.fetchFavoriteState(meetupEventID: fullID)])
 
         // empty -> on
         sut.addFavoriteMeetupEvent(with: meetupEventID)
         persistenceWorker.verifyTestActionsOrder(to: [.fetchFavoriteState(meetupEventID: fullID),
                                                       .setFavoriteState(isFavorite: true, meetupEventID: fullID)])
-        XCTAssertEqual(sut.getFavoriteState(withID: meetupEventID), .favorite, "set favorite on, should be favorite")
+        XCTAssertEqual(sut.getFavoriteState(withID: meetupEventID), .favorite, "set favorite on, should be favorite.")
         persistenceWorker.verifyTestActionsOrder(to: [.fetchFavoriteState(meetupEventID: fullID),
                                                       .setFavoriteState(isFavorite: true, meetupEventID: fullID),
                                                       .fetchFavoriteState(meetupEventID: fullID)])
@@ -39,7 +39,7 @@ class MeetupEventFavoriteWorkerTests: XCTestCase {
                                                       .fetchFavoriteState(meetupEventID: fullID),
                                                       .setFavoriteState(isFavorite: false, meetupEventID: fullID)])
 
-        XCTAssertEqual(sut.getFavoriteState(withID: meetupEventID), .unfavorite, "set favorite off, should be unfavorite")
+        XCTAssertEqual(sut.getFavoriteState(withID: meetupEventID), .unfavorite, "set favorite off, should be unfavorite.")
         persistenceWorker.verifyTestActionsOrder(to: [.fetchFavoriteState(meetupEventID: fullID),
                                                       .setFavoriteState(isFavorite: true, meetupEventID: fullID),
                                                       .fetchFavoriteState(meetupEventID: fullID),

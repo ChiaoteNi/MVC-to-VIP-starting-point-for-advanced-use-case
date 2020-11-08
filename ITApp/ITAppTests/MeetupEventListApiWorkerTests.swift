@@ -12,20 +12,19 @@ class MeetupEventListAPIWorkerTests: XCTestCase {
 
     private var sut: MeetupEventListAPIWorker!
 
-    func test_fetchMeetupEventsSuccess() {
+    func testFetchMeetupEventsSuccess() {
         sut = MeetupEventListAPIWorker(jsonAPIWorker: JsonAPIWorkerSuccessStub())
         sut.fetchMeetupEvents { (result: MeetupEventListAPIWorker.APIResult) in
             switch result {
-            case let .success((recentlyEvents, historyEvents)):
-                XCTAssertEqual(recentlyEvents.count, 1)
-                XCTAssertEqual(historyEvents.count, 24)
+            case let .success(events):
+                XCTAssertEqual(events.count, 26)
             case .failure:
                 XCTFail("Should not goes here.")
             }
         }
     }
 
-    func test_fetchMeetupEventsFail() {
+    func testFetchMeetupEventsFail() {
         let jsonAPIWorker = JsonAPIWorkerFailureStub()
         jsonAPIWorker.error = NSError(domain: "1", code: 2, userInfo: nil)
 

@@ -15,6 +15,7 @@ import Kingfisher
 
 protocol MeetupEventListDisplayLogic: AnyObject {
     func displayMeetupEvents(viewModel: MeetupEventList.FetchEvents.ViewModel)
+    func displayUpdateHistoryEvent(viewModel: MeetupEventList.UpdateHistoryEvent.ViewModel)
 }
 
 final class MeetupEventListViewController: UIViewController, MeetupEventListDisplayLogic {
@@ -26,7 +27,6 @@ final class MeetupEventListViewController: UIViewController, MeetupEventListDisp
 
     private lazy var tableView: UITableView = .init()
     
-    // 這邊VC的dataSource由原本API回來的資料，替換成Presenter轉換後純粹跟畫面有關的UIModel
     private var recentlyEvents: [MeetupEventList.DisplayRecentlyEvent] = []
     private var historyEvents: [MeetupEventList.DisplayHistoryEvent] = []
     
@@ -49,14 +49,14 @@ final class MeetupEventListViewController: UIViewController, MeetupEventListDisp
         
         setupViews()
         loadData()
-//        subscribeFavoriteChange()
+        subscribeFavoriteChange()
     }
     
     override func willMove(toParent parent: UIViewController?) {
         super.willMove(toParent: parent)
         
         guard parent == nil else { return }
-//        unsubscribeFavoriteChange()
+        unsubscribeFavoriteChange()
     }
     
     // MARK: Setup
@@ -73,7 +73,13 @@ final class MeetupEventListViewController: UIViewController, MeetupEventListDisp
     // MARK: - Use cases
     
     func displayMeetupEvents(viewModel: MeetupEventList.FetchEvents.ViewModel) {
-        // TODO: 把API回來的資料(Interactor->Presenter->VC)，準備塞到dataSource並reloadData，顯示到畫面上
+        recentlyEvents = viewModel.recentlyEvents
+        historyEvents = viewModel.historyEvents
+        tableView.reloadData()
+    }
+    
+    func displayUpdateHistoryEvent(viewModel: MeetupEventList.UpdateHistoryEvent.ViewModel) {
+        // TODO: 用eventID抓出要更新的historyEvent，用ViewModel的內容做更新，最後請tableView reload那個dataSource所代表的Row
     }
 }
 
@@ -100,8 +106,16 @@ extension MeetupEventListViewController {
     }
     
     private func loadData() {
-        // TODO: 請Interactor幫忙拉資料
-        interactor?.fetchMeetupEvents(request: <#T##MeetupEventList.FetchEvents.Request#>)
+        let request: MeetupEventList.FetchEvents.Request = .init()
+        interactor?.fetchMeetupEvents(request: request)
+    }
+    
+    private func subscribeFavoriteChange() {
+        // TODO: 請Interactor開始監聽Favorite的狀態更新
+    }
+    
+    private func unsubscribeFavoriteChange() {
+        // TODO: 請Interactor解除監聽Favorite的狀態更新
     }
 }
 
@@ -135,6 +149,9 @@ extension MeetupEventListViewController: UITableViewDataSource {
             if let cell = tableView.dequeueReusableCell(withIdentifier: HistoryMeetupEventCell.reusableIdentifier, for: indexPath) as? HistoryMeetupEventCell {
                 guard let meetupEvent = historyEvents[safe: indexPath.row] else { return cell }
                 cell.configureCell(with: meetupEvent)
+                cell.tapFavoriteCallBack = { [weak self] in
+                    // TODO: 請interactor執行tapFavorite
+                }
                 return cell
             }
         }
@@ -186,6 +203,20 @@ extension MeetupEventListViewController: UITableViewDelegate {
     }
 }
 
+// MARK: - Test Only methods
+extension MeetupEventListViewController {
+    
+    // This function is a control point to reset tableView in test environment.
+    func cp_resetTableView(tableView: UITableView) {
+        self.tableView = tableView
+    }
+    
+    // This function is a control point to reset interactor in test environment.
+    func cp_resetInteractor(interactor: MeetupEventListBusinessLogic) {
+        self.interactor = interactor
+    }
+}
+
 // MARK: - Constants
 extension MeetupEventListViewController {
     
@@ -204,7 +235,5 @@ extension MeetupEventListViewController {
             static var jsonFileName: String { "fake-meetup-event-list" }
             static var jsonFileExtension: String { "json" }
         }
-        
-        static var dateFormat: String { "MM月dd日" }
     }
 }
